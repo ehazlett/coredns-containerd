@@ -2,7 +2,6 @@ package containerd
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 
@@ -17,20 +16,15 @@ var log = clog.NewWithPlugin("containerd")
 
 // Containerd is a containerd DNS resolver
 type Containerd struct {
-	Next plugin.Handler
+	SocketPath string
+	Next       plugin.Handler
 }
 
 // ServeDNS implements the plugin.Handler interface
 func (e Containerd) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	log.Debug("Received response")
-
-	// Wrap.
 	pw := NewResponsePrinter(w)
-
-	// Export metric with the server label set to the current server handling the request.
 	requestCount.WithLabelValues(metrics.WithServer(ctx)).Inc()
-
-	// Call next plugin (if any).
 	return plugin.NextOrFailure(e.Name(), e.Next, ctx, pw, r)
 }
 
@@ -47,9 +41,8 @@ func NewResponsePrinter(w dns.ResponseWriter) *ResponsePrinter {
 }
 
 func (r *ResponsePrinter) WriteMsg(res *dns.Msg) error {
-	fmt.Fprintln(out, "containerd")
+	// TODO: lookup label in containerd
 	return r.ResponseWriter.WriteMsg(res)
 }
 
-// Make out a reference to os.Stdout so we can easily overwrite it for testing.
 var out io.Writer = os.Stdout

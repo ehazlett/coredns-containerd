@@ -20,8 +20,17 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
+	socketPath := ""
+	for c.Next() {
+		if !c.NextArg() {
+			return c.ArgErr()
+		}
+
+		socketPath = c.Val()
+	}
+
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		return Containerd{Next: next}
+		return Containerd{SocketPath: socketPath, Next: next}
 	})
 
 	return nil
