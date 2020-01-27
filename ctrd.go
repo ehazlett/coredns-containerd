@@ -21,8 +21,6 @@ const (
 	AAAA RecordType = "AAAA"
 	// TXT is a DNS TXT record
 	TXT RecordType = "TXT"
-	// DNSLabel is the container label used for record lookup
-	DNSLabel = "io.containerd.ext.dns"
 )
 
 var log = clog.NewWithPlugin("containerd")
@@ -30,7 +28,7 @@ var log = clog.NewWithPlugin("containerd")
 // Containerd is a containerd DNS resolver
 type Containerd struct {
 	client *containerd.Client
-	zones  map[string][]Record
+	label  string
 
 	Next plugin.Handler
 	Fall fall.F
@@ -46,7 +44,7 @@ type Record struct {
 	Value string     `json:"value,omitempty"`
 }
 
-func NewContainerd(ctx context.Context, socketPath, namespace string) (*Containerd, error) {
+func NewContainerd(ctx context.Context, socketPath, namespace, label string) (*Containerd, error) {
 	log.Debugf("connecting to containerd on %s", socketPath)
 	client, err := getClient(socketPath, namespace)
 	if err != nil {
@@ -60,6 +58,7 @@ func NewContainerd(ctx context.Context, socketPath, namespace string) (*Containe
 	log.Debugf("ready: %+v", ready)
 	return &Containerd{
 		client: client,
+		label:  label,
 	}, nil
 }
 

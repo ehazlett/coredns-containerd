@@ -16,19 +16,21 @@ func init() { plugin.Register("containerd", setup) }
 func setup(c *caddy.Controller) error {
 	socketPath := ""
 	namespace := ""
+	label := ""
 
 	for c.Next() {
 		args := c.RemainingArgs()
-		if len(args) != 2 {
+		if len(args) != 3 {
 			return fmt.Errorf("invalid config %q; expected <socket-path> <namespace>\n", args)
 		}
 		socketPath = args[0]
 		namespace = args[1]
+		label = args[2]
 	}
 
 	ctx := context.Background()
 
-	ctrd, err := NewContainerd(ctx, socketPath, namespace)
+	ctrd, err := NewContainerd(ctx, socketPath, namespace, label)
 	if err != nil {
 		return errors.Wrap(err, "error connecting to containerd")
 	}

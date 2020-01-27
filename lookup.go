@@ -31,7 +31,7 @@ func (c *Containerd) lookup(ctx context.Context, query string, qtype uint16) ([]
 		var r []*Record
 		for k, v := range labels {
 			switch k {
-			case DNSLabel:
+			case c.label:
 				if err := json.Unmarshal([]byte(v), &r); err != nil {
 					return nil, err
 				}
