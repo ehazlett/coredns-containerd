@@ -1,18 +1,36 @@
 package containerd
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/caddyserver/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
+	"github.com/pkg/errors"
 )
 
 func init() { plugin.Register("containerd", setup) }
 
 func setup(c *caddy.Controller) error {
-	c.Next() // Ignore "example" and give us the next token.
-	if c.NextArg() {
-		return plugin.Error("containerd", c.ArgErr())
+	socketPath := ""
+	namespace := ""
+
+	for c.Next() {
+		args := c.RemainingArgs()
+		if len(args) != 2 {
+			return fmt.Errorf("invalid config %q; expected <socket-path> <namespace>\n", args)
+		}
+		socketPath = args[0]
+		namespace = args[1]
+	}
+
+	ctx := context.Background()
+
+	ctrd, err := NewContainerd(ctx, socketPath, namespace)
+	if err != nil {
+		return errors.Wrap(err, "error connecting to containerd")
 	}
 
 	c.OnStartup(func() error {
@@ -20,17 +38,9 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
-	socketPath := ""
-	for c.Next() {
-		if !c.NextArg() {
-			return c.ArgErr()
-		}
-
-		socketPath = c.Val()
-	}
-
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		return Containerd{SocketPath: socketPath, Next: next}
+		ctrd.Next = next
+		return ctrd
 	})
 
 	return nil
